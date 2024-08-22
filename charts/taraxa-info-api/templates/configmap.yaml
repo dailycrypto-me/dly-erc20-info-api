@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "daily-info-api.fullname" . }}
+  labels: {{- include "daily-info-api.labels" . | nindent 4 }}
+data:
+  TOKEN_ADDRESS: {{ .Values.app.tokenAddress | quote }}
+  NODE_ENV: {{ .Values.app.environment | quote }}
+  DLY_PROVIDER: {{ .Values.app.dlyProvider | quote }}
+  PROVIDER: {{ .Values.app.provider | quote }}
+  STAKING_ADDRESS: {{ .Values.app.stakingAddress | quote }}
+  DEPLOYER_ADDRESS: {{ .Values.app.deployerAddress | quote }}
+  FOUNDATION_ADDRESS: {{ .Values.app.foundationAddress | quote }}
+  MAINNET_DPOS_CONTRACT_ADDRESS: {{ .Values.app.dlyDposAddress | quote }}
+  DELEGATION_API_ROOT_URI: {{ .Values.app.mainnetDelegationUri | quote }}
+  COINGECKO_API_DAILY_URI: {{ .Values.app.coingeckoUri | quote }}
+  TESTNET_INDEXER_ROOT_URL: {{ .Values.app.testnetIndexerRootUrl | quote }}
+  MAINNET_INDEXER_ROOT_URL: {{ .Values.app.mainnetIndexerRootUrl | quote }}
+  REDIS_HOST: {{ .Values.app.redisHost | quote }}
+  REDIS_PORT: {{ .Values.app.redisPort | quote }}
+  REDIS_NAME: {{ .Values.app.redisName | quote }}

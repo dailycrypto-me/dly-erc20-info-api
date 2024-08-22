@@ -1,0 +1,97 @@
+replicaCount: 2
+
+app:
+  name: daily-info-api
+  component: api
+
+  environment: default
+  tokenAddress: 0xf001937650bb4f62b57521824b2c20f5b91bea05
+  dlyProvider: https://rpc.mainnet.daily.io/
+  provider: https://rpc.mainnet.daily.io/
+  stakingAddress: 0x7Af59Ea121a8Da8e49d2d44856feB7761561995b
+  deployerAddress: 0x723304D1357A2334FCf902Aa3d232f5139080A1b
+  foundationAddress: 0x10f4fD4D9856EFd5700F0Cb70B90Bf519A3cd238
+  dlyDposAddress: 0x00000000000000000000000000000000000000fe
+  mainnetDelegationUri: https://api-delegation.community.daily.io
+  coingeckoUri: https://api.coingecko.com/api/v3/simple/price?ids=daily&vs_currencies=usd
+  testnetIndexerRootUrl: https://indexer.testnet.daily.io
+  mainnetIndexerRootUrl: https://indexer.mainnet.daily.io
+  redisHost: 10.39.114.11
+  redisPort: 6379
+  serverPort: 3000
+  redisPassword: pass
+  redisName: infocache
+
+nodeSelector:
+  cloud.google.com/gke-nodepool: daily-community-default
+
+image:
+  repository: gcr.io/jovial-meridian-249123/daily-info-api
+  # pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS, DELETE"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization,Range,Content-Range,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Access-Control-Allow-Origin"
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths: []
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+tolerations: []
+
+affinity: {}

@@ -1,0 +1,95 @@
+version: 2.1
+
+orbs:
+  docker: circleci/docker@1.7.0
+  helm-release: daily/helm-release@0.1.1
+
+aliases:
+  - &config
+    docker:
+      - image: alpine:3.14
+  - &step_setup_remote_docker
+    setup_remote_docker:
+      version: 19.03.14
+      docker_layer_caching: true
+  - &step_install_deps
+    run:
+      name: Install dependencies
+      shell: /bin/sh -eo pipefail
+      command: |
+        apk add --update openssl openssh-client sudo git bash curl docker-cli
+  - &step_prepare_environment
+    run:
+      name: Prepare Environment
+      shell: /bin/bash -eo pipefail
+      command: |
+        if [ "${CIRCLE_BRANCH}" == "develop" ]; then
+          export ENV=stage
+          echo 'export ENV=stage' >> $BASH_ENV
+        elif [ "${CIRCLE_BRANCH}" == "main" ]; then
+          export ENV=prod
+          echo 'export ENV=prod' >> $BASH_ENV
+        else
+          echo 'Unknown branch' >&2
+          exit 1
+        fi
+        echo "export GCP_REGISTRY=gcr.io/${GOOGLE_PROJECT_ID}" >> $BASH_ENV
+        echo "export VERSION=$(git rev-parse --short HEAD)" >> $BASH_ENV
+        echo "export DOCKER_BRANCH_TAG=$(echo $CIRCLE_BRANCH | tr "[:upper:]" "[:lower:]" | sed 's/[^a-zA-Z0-9_-]/-/g')" >> $BASH_ENV
+        echo "export START_TIME=$(date +%Y%m%d-%Hh%Mm%Ss)" >> $BASH_ENV
+        echo "export TIMESTAMP=$(date +%s)" >> $BASH_ENV
+
+jobs:
+  build:
+    <<: *config
+    steps:
+      - *step_install_deps
+      - checkout
+      - *step_setup_remote_docker
+      - *step_prepare_environment
+      - run:
+          name: Build image
+          shell: /bin/bash -eo pipefail
+          command: |
+            docker build -t daily/daily-info-api:${VERSION} -f Dockerfile .
+      - run:
+          name: Tag and push images
+          shell: /bin/bash -eo pipefail
+          command: |
+            if [ "${ENV}" == "prod" ]; then
+              echo ${DOCKERHUB_PASS} | docker login -u daily --password-stdin
+
+              docker tag daily/daily-info-api:${VERSION} daily/daily-info-api:latest
+              docker push daily/daily-info-api:${VERSION}
+              docker push daily/daily-info-api:latest
+            else
+              echo ${GCLOUD_SERVICE_KEY} | docker login -u _json_key --password-stdin https://gcr.io
+
+              docker tag daily/daily-info-api:${VERSION} ${GCP_REGISTRY}/daily/daily-info-api-develop:${VERSION}
+              docker tag daily/daily-info-api:${VERSION} ${GCP_REGISTRY}/daily/daily-info-api-develop:latest
+              docker push ${GCP_REGISTRY}/daily/daily-info-api-develop:${VERSION}
+              docker push ${GCP_REGISTRY}/daily/daily-info-api-develop:latest
+            fi
+
+workflows:
+  update-api:
+    jobs:
+      - build:
+          context:
+            - DAILY
+            - DOCKERHUB
+            - GCR
+      - helm-release/chart-publish:
+          develop: true
+          charts-dir: charts
+          chart-name: daily-info-api
+          chartmuseum-url: https://charts.gcp.daily.io
+          chartmuseum-username: HELM_REPO_USERNAME
+          chartmuseum-password: HELM_REPO_PASSWORD
+          context:
+            - CHARTSREPO
+          filters:
+            branches:
+              only:
+                - main
+                - develop
